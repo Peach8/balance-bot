@@ -1,0 +1,18 @@
+rm head_pid_vals.txt
+rm imu_theta.txt
+rm dr_theta.txt
+rm pos_pid_vals.txt
+rm enc_vals.txt
+rm velo_vals.txt
+rm angle_vals.txt
+rm velo_pid_vals.txt
+rm angle_pid_vals.txt
+cd ..
+make 
+cd bin
+sudo ./maizebot
+cd ..
+make clean
+
+
+

@@ -1,0 +1,9 @@
+scp -r /home/student/Documents/Team8/bin/ debian@192.168.3.116:/home/debian/balancebot-F17/
+scp -r /home/student/Documents/Team8/common/ debian@192.168.3.116:/home/debian/balancebot-F17/
+scp -r /home/student/Documents/Team8/balancebot/ debian@192.168.3.116:/home/debian/balancebot-F17/
+
+
+
+
+
+ 

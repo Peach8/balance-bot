@@ -1,0 +1,170 @@
+- PID Notes
+	1. Proportional Controller:
+	   -----------------------
+		error = setPoint - processValue; // setPoint = ref val
+										 // processValue = feedback velo
+		output = kp * error; // look for steady state below setPoint and 
+							 // use integral to close the distance on that offset
+	
+	2. Proportional + Integral Controller:
+	   ---------------------------------- 
+	    ~ integral term is affected by accumulation of error in past
+
+		error = setPoint - processValue;
+		reset += kp/tau_i * error;	// tau_i (seconds per repeat): if error is 
+									// staying constant, then every tau_i seconds, 
+									// another factor of kp * error is added to output
+		output = kp * error + reset;
+
+	3. Proportional + Derivative Controller: 
+	   ------------------------------------
+	   ~ derivate term makes prediction of what error will be in future based on how error is changing; detects when processValue 
+		is changing too fast and prevents overshooting; allows you to get to setPoint faster by allowing for a higher proportional 
+		gain and dampening the overshoot that would normally make that gain unstable; filtering derivative term independently prevents 
+		noise from being interpreted as a change in momentum; can also make derivative term depend only on setPoint (not error) so that 
+		a change in setPoint is not interpreted as a change in momentum
+
+	   error = setPoint - processValue;
+	   deriv = kp * tau_d * (error - prevError);
+	   output = kp * error + deriv;
+	   prevError = error;
+
+	4. Proportional + Integral + Derivative Controller:
+	   -----------------------------------------------
+
+	   error = setPoint - processValue;
+	   reset += kp/tau_i * error;
+	   deriv = kp * tau_d * (error - prevError);
+	   
+	   output = kp * error + reset + deriv;
+	   prevError = error;
+
+- Handy commands
+	- scp -r /home/student/Documents/Team8/balancebot-F17 debian@192.168.3.116:/home/debian/
+	- scp -r debian@192.168.3.116:/home/debian/balancebot-F17 /home/student/Documents/Team8/
+
+- TODO:
+	- Look at adaptive control and other tuning algorithms.
+	- Add code for last two loops.
+	- MATLAB plot
+	- RC control
+	- SetOutputLimits for body angle to something smaller?
+
+- NOTES:
+	- Tradeoff: Less dead time vs. Less noise
+		- The slower and more aggressive the filters, the less noise, but longer dead time.
+	- Left  encoder feedback for duty cycle = 1.0: 69
+	- Right encoder feedback for duty cycle = 1.0: 65
+		- Right is always a few less than left...add bias to even out?
+
+	Test 1: Change from 0.35 to 0.5 duty cycle after 10 sec:
+		- Left encoder:
+			- Time to settle after change in CO: 0.11-0.13 (3 trials)
+			- change in PV = (33-23)/69 = 0.1449275
+			- process gain = (10/69)/(0.5-0.35) = 0.96618357
+			- dead time = 0.02-0.03s --> (avg = 0.025) = 0.0004166667min
+			- time constant = 0.04-0.05s (avg = 0.045) = 0.00075min
+		Right encoder:
+			- Time to settle after change in CO: 0.11-0.14 (3 trials)
+			- change in PV = (32-22)/69 = 0.1449275
+			- process gain = (10/69)/(0.5-0.35) = 0.96618357
+			- dead time = 0.02-0.03s --> (avg = 0.025) = 0.0004166667min
+			- time constant = 0.04-0.05s --> (avg = 0.045) = 0.00075min
+		- Results (Left & Right):
+			- Kc = (0.67/0.96618357) * ((0.00075/0.0004166667) + 0.185)
+				 = 1.3764983
+			- Ti = (2.5*0.0004166667) * ((0.00075 + 0.185*0.0004166667)/(0.00075 + 0.611*0.0004166667))
+				 = 0.05145686
+			- Td = (0.37*0.0004166667) * (0.00075/(0.00075 + 0.185*0.0004166667))
+				 = 0.00838791
+		===>
+			- Kp = 1.3764983
+			- Ki = 1.3764983/0.05145686 = 26.75053
+			- Kd = 1.3764983*0.00838791 = 0.0115459
+	Test 2:
+
+
+
+
+Output Cohen-Coon
+1.3764983 1605.0313 0.00019243 20
+1.3764983 1605.0313 0.00019243 20
+6.0 00.0 0.25 5
+1.0 0.0 0.0 1
+
+
+Old PID
+2.75 10.0 0.05 5
+2.75 10.0 0.05 5
+6.0 00.0 0.25 5
+1.0 0.0 0.0 1
+
+Decent
+1.3 5.0 0.012 20
+1.3 5.0 0.012 20
+
+0.8 5.0 0.01 20
+Max says to plot the Kp Kd Ki terms and make sure that Kd is close to Kp in magnitude, but not quite, to check on filtering. Also Kd should be 90 out of phase to act like a derivative 
+
+when we have the new body command multiplied by the sign of the error of the body angle, it does not correct in one direction. 
+When we comment out that reassignment it runs
+
+We mainly talked about halloween costumes and brandon shit on all of liz's ideas
+
+Velocity working, pretuning for starting from rest:
+1.37 0.0 0.0 100
+1.37 0.0 0.0 100
+5.0 0.0 0.025 50
+0.3 0.023 -0.0015 50
+
+Liz redo velo old
+0.3 0.025 -0.0015 50  
+
+1:45am
+1.37 0.0 0.0 100             
+1.37 0.0 0.0 100             
+5.2 0.0 0.00 50             
+0.25 0.023 -0.0013 50         
+0.06 0.0 0.0 100              
+-0.05 0.01 0.05 20				 
+-0.00 0.00 0.0000 100
+
+
+    if (body_turn_REF_STATE > 0) {
+        if (body_turn_REF_STATE > 0.9) {
+            mb_state->left_cmd  = motor_velo_REF_STATE;
+            mb_state->right_cmd = motor_velo_REF_STATE * -1.0;            
+        }
+        else {
+            mb_state->left_cmd  = motor_velo_REF_STATE;
+            mb_state->right_cmd = motor_velo_REF_STATE * (1.0-body_turn_REF_STATE);
+        }
+    }
+    else if (body_turn_REF_STATE < 0) {
+        if (body_turn_REF_STATE < -0.9) {
+            mb_state->left_cmd = motor_velo_REF_STATE * -1.0;
+            mb_state->right_cmd = motor_velo_REF_STATE; 
+        }
+        else {
+            mb_state->left_cmd = motor_velo_REF_STATE * (1.0 - fabs(body_turn_REF_STATE));
+            mb_state->right_cmd = motor_velo_REF_STATE;
+        }
+    }
+    else {
+        mb_state->left_cmd  = motor_velo_REF_STATE;
+        mb_state->right_cmd = motor_velo_REF_STATE;        
+    }
+
+1.37 0.0 0.0 100             
+1.37 0.0 0.0 100             
+5.0 0.0 0.025 50             
+0.3 0.025 -0.0015 50         
+-0.05 0.0 0.0 100              
+0.28 -0.0 0.0 20				 
+-50.0 0.00 0.0000 100
+
+
+
+
+0.65 0.4 0.042 100             
+0.8 0.4 0.042 100  
